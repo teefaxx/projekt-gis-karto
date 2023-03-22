@@ -28,9 +28,26 @@ def get_results():
 
 
 def export_df():
-    print(get_bfs().head())
-    print(get_results().head())
+    get_bfs().to_csv('export/results/bfs_data.csv', sep=';', index=False)
+    get_results().to_csv('export/results/results.csv', sep=';', index=False)
+
+    return print('Dateframes (bfs and results) created and exported...')
+
+
+def export_merged_df(df_in):
+    df_in.to_csv('data.csv', index=False)
+
+    return print('Dataframes (merged) exported...')
+
+
+def merge_data():
+    bfs = pd.read_csv('export/results/bfs_data.csv', sep=';')
+    results = pd.read_csv('export/results/results.csv', sep=';')
+    merged_df = pd.merge(results, bfs, on=['GMDNR'])
+
+    return merged_df
 
 
 if __name__ == '__main__':
     export_df()
+    export_merged_df(merge_data())
