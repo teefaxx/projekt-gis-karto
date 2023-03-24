@@ -6,7 +6,8 @@ import os
 def get_bfs():
     bfs = gpd.read_file('data/shp_bfs/g1g23.shp',
                         geometry='geometry', srs='epsg:2056')
-    keep_cols = ['GMDNR', 'GMDNAME', 'BZNR', 'KTNR', 'geometry']
+    keep_cols = ['GMDNR', 'GMDNAME', 'BZNR',
+                 'KTNR', 'E_CNTR', 'N_CNTR', 'geometry']
     bfs = bfs.drop(
         columns=[col for col in bfs.columns if col not in keep_cols])
 
