@@ -4,6 +4,7 @@ import os
 
 
 def get_bfs():
+    # Reads in the BFS Shapegile and keeps the needed columns
     bfs = gpd.read_file('data/shp_bfs/g1g23.shp',
                         geometry='geometry', srs='epsg:2056')
     keep_cols = ['GMDNR', 'GMDNAME', 'BZNR',
@@ -15,6 +16,7 @@ def get_bfs():
 
 
 def get_results():
+    # Reads in the Results of the vote
     results = pd.read_excel('data/Results/Resultate.xlsx',
                             sheet_name='data', header=0)
     results = results.dropna(axis=0)
@@ -29,6 +31,7 @@ def get_results():
 
 
 def export_df():
+    # Exports the dataframes separately to csv
     get_bfs().to_csv('export/results/bfs_data.csv', sep=';', index=False)
     get_results().to_csv('export/results/results.csv', sep=';', index=False)
 
@@ -50,5 +53,5 @@ def merge_data():
 
 
 if __name__ == '__main__':
-    export_df()
+    # export_df()
     export_merged_df(merge_data())
