@@ -5,7 +5,7 @@ import os
 
 def read_osm():
     osm_data = gpd.read_file(
-        'data/OSM_new/switzerland-latest-free.shp/gis_osm_roads_free_1.shp')  # Read file
+        '../../data/OSM_new/switzerland-latest-free.shp/gis_osm_roads_free_1.shp')  # Read file
     osm_data = osm_data[osm_data['code'] == 5152]  # Filter for cycleways
     osm_data = osm_data.to_crs('epsg:2056')  # Change to LV95
     keep_cols = ['osm_id', 'code', 'geometry']
@@ -16,7 +16,7 @@ def read_osm():
 
 
 def read_veloland():
-    veloland = gpd.read_file('data/Velo/veloland_2056.shp/Weg.shp',
+    veloland = gpd.read_file('../../data/Velo/veloland_2056.shp/Weg.shp',
                              geometry='geometry', crs='epsg:2056')  # Read data
     keep_cols = ['OBJECTID', 'SHAPE_Leng', 'Change_Dt', 'geometry']
     veloland = veloland.drop(
