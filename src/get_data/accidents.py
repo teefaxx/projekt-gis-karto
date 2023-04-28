@@ -3,6 +3,14 @@ import geopandas as gpd
 from shapely import wkt
 import os
 
+'''
+This file is used to get tha data from the accidents in Switzerland.
+The data is filtered by year (until 2018) and by mode (only bicycle).
+
+RETURNS: 
+    - GeoJSON with all the accidents
+'''
+
 
 def read_data(export=False):
     df = gpd.read_file(

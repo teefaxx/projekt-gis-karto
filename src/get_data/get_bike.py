@@ -2,6 +2,13 @@ import pandas as pd
 import geopandas as gpd
 import os
 
+'''
+This file is used to get the bike data from the OSM and the Veloland data.
+
+RETURNS: 
+    - GeoJSON with all the bike data
+'''
+
 
 def read_osm():
     osm_data = gpd.read_file(

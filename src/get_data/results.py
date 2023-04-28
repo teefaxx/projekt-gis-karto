@@ -3,6 +3,15 @@ import geopandas as gpd
 import os
 
 
+'''
+This file is used to get the results of the vote and the BFS geometries.
+
+RETURNS:
+    - GeoJSON with all the results and the BFS geometries
+
+'''
+
+
 def get_bfs():
     # Reads in the BFS Shapegile and keeps the needed columns
     bfs = gpd.read_file('/Users/Dario/Documents/GitHub/GIS_KARTO/data/shp_bfs/g1g23_encl.shp',
