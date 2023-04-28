@@ -41,9 +41,22 @@ def merge_data(df_left, df_right, on=str):
     df = pd.merge(df_left, df_right, on=on, how='left')
     return df
 
+# TODO: Fix this function
+
+
+def retype_cols(gdf):
+    gdf['ELEGIBLE_VOTERS'] = gdf['ELEGIBLE_VOTERS'].astype(int)
+    gdf['TOT_VOTES'] = gdf['TOT_VOTES'].astype(int)
+    gdf['PART_PERCENT'] = gdf['PART_PERCENT'].astype(float)
+    gdf['VALID_VOTES'] = gdf['VALID_VOTES'].astype(int)
+    gdf['YES'] = gdf['YES'].astype(int)
+    gdf['NO'] = gdf['NO'].astype(int)
+    return gdf
+
 
 def export(df_in, filename):
     df_in.to_file(f'../export/master/{filename}.geojson', driver='GeoJSON')
+    return "Exported"
 
 
 if __name__ == '__main__':
@@ -51,5 +64,6 @@ if __name__ == '__main__':
     population = pop_clean(population)
     master = gpd.read_file(
         '../export/master/sum_of_bikes.geojson', driver='GeoJSON')
+    master = retype_cols(master)
     merged = merge_data(master, population, on='BFSNR')
-    export(merged, 'master_table')
+    export(merged, 'master_table_type')
