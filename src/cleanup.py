@@ -56,7 +56,7 @@ def retype_cols(gdf):
 
 def export(df_in, filename):
     df_in.to_file(f'../export/master/{filename}.geojson', driver='GeoJSON')
-    return "Exported"
+    return print("Exported")
 
 
 if __name__ == '__main__':
@@ -64,6 +64,6 @@ if __name__ == '__main__':
     population = pop_clean(population)
     master = gpd.read_file(
         '../export/master/sum_of_bikes.geojson', driver='GeoJSON')
-    master = retype_cols(master)
     merged = merge_data(master, population, on='BFSNR')
-    export(merged, 'master_table_type')
+    merged = merged[merged['BFSNR'] != 389]
+    export(merged, 'master_table_new')
