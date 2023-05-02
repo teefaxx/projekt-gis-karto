@@ -25,7 +25,7 @@ def read_osm():
 
 def read_veloland():
     # Reads in the Veloland Shapefile and keeps the needed columns
-    veloland = gpd.read_file('../../data/velo/veloland_2056.shp/Weg.shp',
+    veloland = gpd.read_file('../../data/velo/Weg.shp',
                              geometry='geometry', crs='epsg:2056')  # Read data
     keep_cols = ['OBJECTID', 'SHAPE_Leng', 'Change_Dt', 'geometry']
     veloland = veloland.drop(
@@ -41,7 +41,7 @@ def concat_bike(osm_data, veloland):
 
 def export_df(df_in):
     # Exports the dataframe as GeoJSON
-    df_in.to_file('export/velo/bikes.geojson', driver='GeoJSON')
+    df_in.to_file('../../export/velo/bikes.geojson', driver='GeoJSON')
     return print("Created GeoJSON...")
 
 

@@ -3,7 +3,7 @@ import geopandas as gpd
 
 
 def read_population():
-    results = pd.read_excel('/Users/Dario/Documents/GitHub/GIS_KARTO/data/bevoelkerung/bev.xlsx',
+    results = pd.read_excel('../data/bevoelkerung/bev.xlsx',
                             sheet_name='data', header=3)
     results = results.dropna(axis=0)
 
@@ -45,7 +45,7 @@ def merge_data(df_left, df_right, on=str):
 
 
 def retype_cols(gdf):
-    gdf['ELEGIBLE_VOTERS'] = gdf['ELEGIBLE_VOTERS'].astype(int)
+    gdf['ELIGIBLE_VOTERS'] = gdf['ELIGIBLE_VOTERS'].astype(int)
     gdf['TOT_VOTES'] = gdf['TOT_VOTES'].astype(int)
     gdf['PART_PERCENT'] = gdf['PART_PERCENT'].astype(float)
     gdf['VALID_VOTES'] = gdf['VALID_VOTES'].astype(int)
@@ -54,16 +54,18 @@ def retype_cols(gdf):
     return gdf
 
 
-def export(df_in, filename):
-    df_in.to_file(f'../export/master/{filename}.geojson', driver='GeoJSON')
-    return print("Exported")
+def export(df_in):
+    df_in.to_file(f'../export/master/master_acc_bike_pop.geojson',
+                  driver='GeoJSON')
+    return print("Dataframe exported...")
 
 
 if __name__ == '__main__':
     population = read_population()
     population = pop_clean(population)
     master = gpd.read_file(
-        '../export/master/sum_of_bikes.geojson', driver='GeoJSON')
+        '../export/master/master_acc_bike.geojson', driver='GeoJSON')
     merged = merge_data(master, population, on='BFSNR')
+    # Delete this row, has a bunch of NaNs
     merged = merged[merged['BFSNR'] != 389]
-    export(merged, 'master_table_new')
+    export(merged)
