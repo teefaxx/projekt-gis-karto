@@ -66,7 +66,7 @@ def calc_corr_ch(df_in):
 
 def acc_per100k(df_in):
     master = df_in
-    master = master.fillna(-1)
+    master = master.fillna(0)
     master['ACCIDENTS_PER_100K'] = master['ACCIDENTS'] / \
         master['POP_TOTAL'] * 100000
     master = master.replace([np.inf, -np.inf], 0)
