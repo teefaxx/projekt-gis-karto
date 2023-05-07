@@ -64,16 +64,27 @@ def calc_corr_ch(df_in):
     return correlation
 
 
+def acc_per100k(df_in):
+    master = df_in
+    master = master.fillna(-1)
+    master['ACCIDENTS_PER_100K'] = master['ACCIDENTS'] / \
+        master['POP_TOTAL'] * 100000
+    master = master.replace([np.inf, -np.inf], 0)
+
+    return master
+
+
 def export_geojson(df_in):
-    df_in.to_file("../tmp/json/master_correlation.geojson",
+    df_in.to_file("../export/master/master_acc_bike_pop_street_corr.geojson",
                   driver='GeoJSON')
-    return print('Dataframe exported to ../tmp/json/master_correlation.geojson')
+    return print('Dataframe exported to ../export/master/master_acc_bike_pop_street_corr.geojson')
 
 
 if __name__ == '__main__':
     master = gpd.read_file(
         '../export/master/master_acc_bike_pop_street.geojson')
+    master = acc_per100k(master)
     master = percentage(master)
     corr_df = calc_corr_bz(calc_ratio(master), master)
     export_geojson(corr_df)
-    print(calc_corr_ch(master))
+    # print(calc_corr_ch(master))
