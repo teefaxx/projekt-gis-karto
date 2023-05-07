@@ -14,7 +14,7 @@ RETURNS:
 
 def get_bfs():
     # Reads in the BFS Shapefile and keeps the needed columns
-    bfs = gpd.read_file('../../data/shp_bfs/g1b23.shp',
+    bfs = gpd.read_file('../../data/shp_bfs/g1g23.shp',
                         geometry='geometry', srs='epsg:2056')
     keep_cols = ['GMDNR', 'GMDNAME', 'BZNR',
                  'KTNR', 'E_CNTR', 'N_CNTR', 'geometry']
@@ -54,7 +54,7 @@ def export_merged_df(df_in):
     # Exports the merged dataframe as GeoJSON
     df_in.to_file('../../export/results/results_bfs.geojson',
                   driver='GeoJSON', epsg=2056)
-    return print('Dataframes (merged) exported...')
+    return print('Dataframes (merged) exported to ../../export/results/results_bfs.geojson')
 
 
 if __name__ == '__main__':
