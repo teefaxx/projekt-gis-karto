@@ -74,6 +74,17 @@ def acc_per100k(df_in):
     return master
 
 
+def export_accidents(df_in):
+    # Export the mean accidents per 100k inhabitants per KTNR
+    df = df_in
+    df = df.groupby('KTNR')['ACCIDENTS_PER_100K'].mean()
+    # Rename columns to 'KTNR' and 'ACCIDENTS_PER_100K'
+    df = df.reset_index()
+    df.ACCIDENTS_PER_100K = df.ACCIDENTS_PER_100K.round(2)
+    df.to_csv('../export/accidents/acc_p_100.csv', index=False)
+    return print('Accidents Dataframe exported to ../export/accidents/acc_p_100.csv')
+
+
 def export_geojson(df_in):
     df_in.to_file("../export/master/master_acc_bike_pop_street_corr.geojson",
                   driver='GeoJSON')
@@ -84,7 +95,8 @@ if __name__ == '__main__':
     master = gpd.read_file(
         '../export/master/master_acc_bike_pop_street.geojson')
     master = acc_per100k(master)
+    export_accidents(master)
     master = percentage(master)
     corr_df = calc_corr_bz(calc_ratio(master), master)
     export_geojson(corr_df)
-    # print(calc_corr_ch(master))
+    print(calc_corr_ch(master))
