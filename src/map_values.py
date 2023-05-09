@@ -78,10 +78,10 @@ def export(df_in):
     df = df_in.copy()
 
     keep_cols = ['BFSNR', 'YES_IN_PER', 'BIKE_STREET_PER',
-                 'ACCIDENTS', 'POP_TOTAL', 'GMDNAME', 'BZNR', 'KTNR', 'geometry']
+                 'ACCIDENTS', 'POP_TOTAL', 'GMDNAME', 'BZNR', 'KTNR', 'E_CNTR', 'N_CNTR', 'geometry']
 
     df = df[keep_cols]
-    df.to_file('../export/final.geojson', driver='GeoJSON')
+    df.to_file('../export/final_new.geojson', driver='GeoJSON')
 
     return print('Dataframe exported to ../export/final.geojson')
 
