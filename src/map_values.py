@@ -77,7 +77,7 @@ def comparison(df_in):
 def export(df_in):
     df = df_in.copy()
 
-    keep_cols = ['BFSNR', 'YES_IN_PER', 'BIKE_STREET_PER',
+    keep_cols = ['BFSNR', 'YES_IN_PER', 'BIKE_STREET_PER', 'VALUE',
                  'ACCIDENTS', 'POP_TOTAL', 'GMDNAME', 'BZNR', 'KTNR', 'E_CNTR', 'N_CNTR', 'geometry']
 
     df = df[keep_cols]
