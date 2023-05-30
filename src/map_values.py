@@ -14,7 +14,7 @@ def acc_per100k(df_in):
     df = df_in.copy()
     df = df.fillna(0)
     df['ACCIDENTS_PER_100K'] = df['ACCIDENTS'] / \
-        df['POP_TOTAL'] * 100000
+        df['POP_TOTAL'] * 100_000
     df_out = df.replace([np.inf, -np.inf], 0)
 
     return df_out
@@ -40,7 +40,7 @@ def comparison(df_in):
     #mean_yes = np.round(df.YES_IN_PER.mean(),2)
     df = df_in.copy()
     mean_yes = np.round(df.YES_IN_PER.mean(), 2)
-    print(mean_yes)
+    # print(mean_yes)
 
     velo = [0.0499, 0.0538, 0.07373, 0.07689, 0.06192, 0.07163]
     # https://www.prixvelo.ch/de/prix-velo-infrastruktur
@@ -78,12 +78,12 @@ def export(df_in):
     df = df_in.copy()
 
     keep_cols = ['BFSNR', 'YES_IN_PER', 'BIKE_STREET_PER', 'VALUE',
-                 'ACCIDENTS', 'POP_TOTAL', 'GMDNAME', 'BZNR', 'KTNR', 'E_CNTR', 'N_CNTR', 'geometry']
+                 'ACCIDENTS', 'ACCIDENTS_PER_100K', 'POP_TOTAL', 'GMDNAME', 'BZNR', 'KTNR', 'E_CNTR', 'N_CNTR', 'geometry']
 
     df = df[keep_cols]
-    df.to_file('../export/final_new.geojson', driver='GeoJSON')
+    df.to_file('../export/final_values.geojson', driver='GeoJSON')
 
-    return print('Dataframe exported to ../export/final.geojson')
+    return print('Dataframe exported to ../export/final_values.geojson')
 
 
 if __name__ == '__main__':
