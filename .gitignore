@@ -2,7 +2,7 @@
 
 data/
 data.zip
-notebooks/
+src/notebooks/
 #notebooks/clean_up_pop.ipynb
 #notebooks/corr.ipynb
 #notebooks/get_data.ipynb
