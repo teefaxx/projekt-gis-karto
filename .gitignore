@@ -3,10 +3,10 @@
 data/
 data.zip
 notebooks/
-clean_up_pop.ipynb
-corr.ipynb
-get_data.ipynb
-join.ipynb
+notebooks/clean_up_pop.ipynb
+notebooks/corr.ipynb
+notebooks/get_data.ipynb
+notebooks/join.ipynb
 #export/
 
 
