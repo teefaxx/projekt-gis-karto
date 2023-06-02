@@ -1,6 +1,8 @@
-import geopandas as gpd
-import numpy as np
+# NOT NEEDED ANYMORE
+
 import pandas as pd
+import numpy as np
+import geopandas as gpd
 
 
 def percentage(df_in):
