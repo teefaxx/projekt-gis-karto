@@ -3,7 +3,7 @@
 ### Ablauf der Datenanalyse
 
 ---
-**[Zip-Ordner](https://we.tl/t-W3g6WK0sIz?utm_campaign=TRN_TDL_05&utm_source=sendgrid&utm_medium=email&trk=TRN_TDL_05) herunterladen und in Git Ordner ziehen (Link valide bis 9 Juni 2023 at 18:20).**
+**[Zip-Ordner](https://we.tl/t-W3g6WK0sIz?utm_campaign=TRN_TDL_05&utm_source=sendgrid&utm_medium=email&trk=TRN_TDL_05) herunterladen und in Git Ordner ziehen (Link valide bis 9. Juni 2023 at 18:20).**
 
 **Unzip [data.zip](data.zip) um Code laufen zu lassen.**
 
