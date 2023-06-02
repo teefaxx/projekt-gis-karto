@@ -3,7 +3,7 @@
 data/
 data.zip
 src/notebooks/
-#notebooks/clean_up_pop.ipynb
+src/notebooks/clean_up_pop.ipynb
 #notebooks/corr.ipynb
 #notebooks/get_data.ipynb
 #notebooks/join.ipynb
