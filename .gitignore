@@ -2,8 +2,12 @@
 
 data/
 data.zip
-#export/
 notebooks/
+clean_up_pop.ipynb
+corr.ipynb
+get_data.ipynb
+join.ipynb
+#export/
 
 
 # Byte-compiled / optimized / DLL files
