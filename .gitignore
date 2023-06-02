@@ -3,7 +3,6 @@
 data/
 data.zip
 notebooks/
-src/correlation.py
 #notebooks/clean_up_pop.ipynb
 #notebooks/corr.ipynb
 #notebooks/get_data.ipynb
