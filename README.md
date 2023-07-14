@@ -1,6 +1,6 @@
 # Projekt GIS & Kartografie
 
-### [**Projektbericht**](FS23_Proj_GIS_Karto_Bericht_Dario_DeLuca)
+### [**Projektbericht**](FS23_Proj_GIS_Karto_Bericht_Dario_DeLuca.pdf)
 #### Abstract
 
 Im Rahmen des Projekts «GIS & Kartografie» befasst sich dieser Bericht mit der räumlichen Analyse der schweizerischen Abstimmungsergebnisse über den Bundesbeschluss zu Velowegen sowie Fuss- und Wanderwegen. Ziel der Analyse ist es, den Zusammenhang zwischen der Anzahl der Ja-Stimmen und dem Vorhandensein von Veloinfrastrukutr in den Gemeinden zu untersuchen. Die Analyse basiert auf verschiedenen Datenquellen wie Abstimmungsdaten, Informationen zu Fahrradwegen und Unfallstatistiken. Die Ergebnisse werden mithilfe von Choroplethenkarten und Kreisdiagrammen visuell dargestellt, um einen umfassenden Überblick über den Zusammenhang zu geben. Die Ergebnisse zeigen, dass kein statistisch signifikanter Zusammenhang zwischen der Anzahl der Ja-Stimmen und dem Vorhandensein von Fahrradinfrastruktur oder den Unfallraten besteht. Vielmehr haben sozioökonomische Aspekte einen Einfluss auf die Abstimmungsresultate.
