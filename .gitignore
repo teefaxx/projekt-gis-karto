@@ -1,8 +1,9 @@
-# Personal Ignoers
-
-data/
+# Rohdaten (nicht im Repo, siehe README)
+data/raw/
 data.zip
-#export/
+
+# Web-Karte: lokale Node-Artefakte
+node_modules/
 
 
 # Byte-compiled / optimized / DLL files

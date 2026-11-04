@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Velowege-Abstimmung 2018</title>
+  <meta name="description" content="Interaktive Karte: Abstimmungsresultate zum Bundesbeschluss Velo vom 23. September 2018, Veloweg-Anteil und Velounfälle in den Schweizer Gemeinden.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='16' height='16' fill='%231f9a4c'/%3E%3Crect x='16' width='16' height='16' fill='%23d9a3e2'/%3E%3Crect y='16' width='16' height='16' fill='%23a6db9c'/%3E%3Crect x='16' y='16' width='16' height='16' fill='%23983aa8'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="map" role="region" aria-label="Karte der Schweizer Gemeinden"></div>
+
+  <!-- Titel -->
+  <header class="panel title-panel" id="title-panel">
+    <p class="eyebrow">Projekt GIS &amp; Kartografie · ETH Zürich · FS 2023</p>
+    <h1>Bundesbeschluss über die Velowege sowie die Fuss- und Wanderwege</h1>
+    <p class="lead">
+      Am 23. September 2018 vom Volk mit <strong>73.6&nbsp;%</strong> und von allen Ständen angenommen.
+      Die Karte zeigt pro Gemeinde, ob Velowege und Ja-Stimmen über dem Durchschnitt liegen,
+      dazu die Velounfälle pro 100'000 Einwohner je Kanton.
+    </p>
+
+    <div class="search" role="search">
+      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg>
+      <input id="search" type="search" placeholder="Gemeinde suchen …" autocomplete="off"
+             aria-label="Gemeinde suchen" aria-controls="search-results" aria-expanded="false" role="combobox">
+      <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+    </div>
+
+    <details class="example">
+      <summary>Lesebeispiel</summary>
+      <p>
+        In <button class="link" data-goto="159">Uetikon am See (ZH)</button> machen Velowege 3.4&nbsp;km oder
+        6.2&nbsp;% des Strassennetzes aus, knapp unter dem Referenzwert von <span data-meta="bikeThreshold"></span>.
+        Am Abstimmungssonntag stimmten 68&nbsp;% der Vorlage zu, ebenfalls unter dem Gemeindedurchschnitt
+        von <span data-meta="yesThreshold"></span> → <em>dunkelviolett</em>.
+      </p>
+      <p>
+        In <button class="link" data-goto="5886">Montreux (VD)</button> beträgt der Anteil der Velowege trotz einer
+        Länge von 5.9&nbsp;km nur 1.6&nbsp;% des Strassennetzes. Dennoch gab es mit 87&nbsp;% eine
+        überdurchschnittliche Zustimmung → <em>hellgrün</em>.
+      </p>
+    </details>
+  </header>
+
+  <!-- Legende -->
+  <aside class="panel legend-panel" id="legend-panel" aria-label="Legende">
+    <button class="legend-toggle" id="legend-toggle" aria-expanded="true" aria-controls="legend-body">
+      <span>Legende</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5z"/></svg>
+    </button>
+    <div class="legend-body" id="legend-body">
+      <h2>Abstimmungsergebnisse und Velowege</h2>
+
+      <div class="tree">
+        <div class="q">Überdurchschnittlich viele Velowege in Gemeinde<small>≥ <span data-meta="bikeThreshold"></span> des Strassennetzes</small></div>
+        <svg class="branch" viewBox="0 0 200 22" preserveAspectRatio="none" aria-hidden="true"><path d="M100 0v8M50 8h100M50 8v14M150 8v14"/></svg>
+        <div class="answers"><span class="a a-yes">Ja</span><span class="a">Nein</span></div>
+        <div class="q">Überdurchschnittlich viele Ja-Stimmen in Gemeinde<small>≥ <span data-meta="yesThreshold"></span> (Ø aller Gemeinden)</small></div>
+        <svg class="branch" viewBox="0 0 200 22" preserveAspectRatio="none" aria-hidden="true"><path d="M50 0v8M25 8h50M25 8v14M75 8v14M150 0v8M125 8h50M125 8v14M175 8v14"/></svg>
+        <div class="swatches" id="class-filter">
+          <button class="sw" data-cls="2"  aria-pressed="true"><i style="--c:var(--c2)"></i><b>Ja</b><span class="n"></span></button>
+          <button class="sw" data-cls="1"  aria-pressed="true"><i style="--c:var(--c1)"></i><b>Nein</b><span class="n"></span></button>
+          <button class="sw" data-cls="0"  aria-pressed="true"><i style="--c:var(--c0)"></i><b>Ja</b><span class="n"></span></button>
+          <button class="sw" data-cls="-1" aria-pressed="true"><i style="--c:var(--cm1)"></i><b>Nein</b><span class="n"></span></button>
+        </div>
+        <p class="hint">Klick auf ein Feld blendet die Klasse ein/aus.</p>
+        <p class="nodata"><i></i> Keine eigenen Abstimmungsdaten (gemeinsame Urne)</p>
+      </div>
+
+      <h2>Velounfälle pro 100'000 Einwohner <small>Mittel der Gemeinden je Kanton</small></h2>
+      <ul class="circles" id="circle-legend"></ul>
+
+      <h2>Ebenen</h2>
+      <div class="toggles">
+        <label><input type="checkbox" id="tg-cantons-pts" checked> Unfall-Symbole (Kantone)</label>
+        <label><input type="checkbox" id="tg-borders" checked> Kantonsgrenzen</label>
+        <label><input type="checkbox" id="tg-labels" checked> Gemeindenamen (ab Zoom 10)</label>
+        <label><input type="checkbox" id="tg-basemap"> Landeskarte grau (swisstopo)</label>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Detailansicht -->
+  <aside class="panel info-panel" id="info" aria-live="polite" hidden>
+    <button class="close" id="info-close" aria-label="Details schliessen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
+    </button>
+    <div id="info-body"></div>
+  </aside>
+
+  <div class="tooltip" id="tooltip" hidden></div>
+
+  <footer class="credits">
+    <span>Autor: Dario De Luca</span>
+    <span>Daten: BFS · swisstopo · ASTRA (Strassenverkehrsunfälle) · Veloland Schweiz · OpenStreetMap-Mitwirkende</span>
+    <a href="https://github.com/teefaxx/projekt-gis-karto">Code &amp; Bericht auf GitHub</a>
+  </footer>
+
+  <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

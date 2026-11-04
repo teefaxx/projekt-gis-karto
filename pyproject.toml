@@ -1,0 +1,41 @@
+[project]
+name = "velowege-abstimmung"
+version = "0.1.0"
+description = "Räumliche Analyse der Abstimmung zum Bundesbeschluss Velowege (2018) – Projekt GIS & Kartografie"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "geopandas>=1.0",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "shapely>=2.0",
+    "pyogrio>=0.7",
+    "pyproj>=3.4",
+    "matplotlib>=3.7",
+    "seaborn>=0.12",
+    "openpyxl>=3.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "ruff>=0.4"]
+
+[project.scripts]
+velowege-pipeline = "pipeline.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pipeline"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,13 @@
+# Spiegel der Abhängigkeiten aus pyproject.toml (für pip ohne uv)
+geopandas>=1.0
+pandas>=2.0
+numpy>=1.24
+shapely>=2.0
+pyogrio>=0.7
+pyproj>=3.4
+matplotlib>=3.7
+seaborn>=0.12
+openpyxl>=3.1
+# Entwicklung
+pytest>=7
+ruff>=0.4
