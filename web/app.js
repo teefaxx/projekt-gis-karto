@@ -427,11 +427,18 @@ function setSelected(sel, on) {
   }
 }
 
+function showInfo() {
+  $('#info').hidden = false;
+  $('#info').scrollTop = 0;
+  document.body.classList.add('has-info');
+}
+
 function select(sel, { fly = false } = {}) {
   setSelected(selection, false);
   selection = sel;
   if (!sel) {
     $('#info').hidden = true;
+    document.body.classList.remove('has-info');
     history.replaceState(null, '', location.pathname + location.search);
     return;
   }
@@ -527,7 +534,7 @@ function renderMunicipality(p) {
     setView('kantone');
     select({ type: 'kanton', id: p.kt }, { fly: true });
   });
-  $('#info').hidden = false;
+  showInfo();
 }
 
 function renderCanton(k) {
@@ -563,7 +570,7 @@ function renderCanton(k) {
       <div class="stack">${segments}</div>
       <ul class="stack-legend">${legend}</ul>
     </div>`;
-  $('#info').hidden = false;
+  showInfo();
 }
 
 $('#info-close').addEventListener('click', () => select(null));

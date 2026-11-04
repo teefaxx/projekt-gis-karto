@@ -15,10 +15,13 @@
 <body>
   <div id="map" role="region" aria-label="Karte der Schweizer Gemeinden"></div>
 
+  <!-- Linke Spalte: Titel und Detailansicht teilen sich die Höhe -->
+  <div class="left-col">
   <!-- Titel -->
   <header class="panel title-panel" id="title-panel">
     <p class="eyebrow">Projekt GIS &amp; Kartografie · ETH Zürich · FS 2023</p>
     <h1>Bundesbeschluss über die Velowege sowie die Fuss- und Wanderwege</h1>
+    <div class="collapse"><div class="collapse-inner">
     <p class="lead">
       Am 23. September 2018 vom Volk mit <strong>73.6&nbsp;%</strong> und von allen Ständen angenommen.
       Die Karte zeigt pro Gemeinde, ob Velowege und Ja-Stimmen über dem Durchschnitt liegen,
@@ -30,6 +33,7 @@
         Projektbericht (PDF)
       </a>
     </p>
+    </div></div>
 
     <div class="search" role="search">
       <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg>
@@ -38,6 +42,7 @@
       <ul id="search-results" class="search-results" role="listbox" hidden></ul>
     </div>
 
+    <div class="collapse"><div class="collapse-inner">
     <details class="example">
       <summary>Lesebeispiel</summary>
       <p>
@@ -52,7 +57,17 @@
         überdurchschnittliche Zustimmung → <em>hellgrün</em>.
       </p>
     </details>
+    </div></div>
   </header>
+
+    <!-- Detailansicht -->
+    <aside class="panel info-panel" id="info" aria-live="polite" hidden>
+      <button class="close" id="info-close" aria-label="Details schliessen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
+      </button>
+      <div id="info-body"></div>
+    </aside>
+  </div>
 
   <!-- Legende -->
   <aside class="panel legend-panel" id="legend-panel" aria-label="Legende">
@@ -113,13 +128,6 @@
     </div>
   </aside>
 
-  <!-- Detailansicht -->
-  <aside class="panel info-panel" id="info" aria-live="polite" hidden>
-    <button class="close" id="info-close" aria-label="Details schliessen">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
-    </button>
-    <div id="info-body"></div>
-  </aside>
 
   <div class="tooltip" id="tooltip" hidden></div>
 

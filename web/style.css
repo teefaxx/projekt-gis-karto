@@ -52,10 +52,34 @@ button { font: inherit; color: inherit; }
 }
 
 /* ---------- Titel ---------- */
-.title-panel {
+/* Linke Spalte: Titel oben, Detailansicht darunter, nie überlappend */
+.left-col {
+  position: absolute;
+  z-index: 2;
   top: var(--gutter);
   left: var(--gutter);
+  bottom: var(--gutter);
   width: min(430px, calc(100vw - 2 * var(--gutter)));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+.left-col > .panel { pointer-events: auto; }
+
+/* Einleitung und Lesebeispiel klappen weich ein, sobald Details offen sind */
+.collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows .3s ease, opacity .25s ease;
+}
+.collapse-inner { min-height: 0; overflow: hidden; }
+body.has-info .collapse { grid-template-rows: 0fr; opacity: 0; }
+
+.title-panel {
+  position: relative;
+  z-index: 2;             /* Suchvorschläge über der Detailansicht */
+  flex: none;
   padding: 18px 20px 14px;
 }
 
@@ -232,14 +256,14 @@ body[data-view="kantone"] .tree { opacity: .45; }
 
 /* ---------- Detailansicht ---------- */
 .info-panel {
-  left: var(--gutter);
-  bottom: 44px;
-  width: min(430px, calc(100vw - 2 * var(--gutter)));
-  max-height: calc(100vh - 360px);
-  min-height: 200px;
+  position: relative;
+  z-index: 1;
+  flex: 0 1 auto;
+  min-height: 0;          /* darf schrumpfen und scrollt dann intern */
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 18px 20px 16px;
-  animation: rise .2s ease-out;
+  animation: rise .25s ease-out;
 }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 
@@ -328,10 +352,8 @@ body[data-view="kantone"] .tree { opacity: .45; }
     top: auto; bottom: var(--gutter); right: var(--gutter); left: var(--gutter);
     width: auto; max-height: 55vh; padding: 2px 14px 10px;
   }
-  .info-panel {
-    left: var(--gutter); right: var(--gutter); bottom: var(--gutter); width: auto;
-    max-height: 62vh; min-height: 0; z-index: 3;
-  }
+  .left-col { z-index: 3; width: auto; right: var(--gutter); }
+  .info-panel { margin-top: auto; max-height: 62vh; }
   .maplibregl-ctrl-top-right { margin-right: 0; top: 136px; }
   .maplibregl-ctrl-fullscreen { display: none !important; }
   .maplibregl-ctrl-bottom-right { bottom: 56px; }
