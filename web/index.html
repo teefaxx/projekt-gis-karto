@@ -33,8 +33,8 @@
 
     <div class="search" role="search">
       <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg>
-      <input id="search" type="search" placeholder="Gemeinde suchen …" autocomplete="off"
-             aria-label="Gemeinde suchen" aria-controls="search-results" aria-expanded="false" role="combobox">
+      <input id="search" type="search" placeholder="Gemeinde oder Kanton suchen …" autocomplete="off"
+             aria-label="Gemeinde oder Kanton suchen" aria-controls="search-results" aria-expanded="false" role="combobox">
       <ul id="search-results" class="search-results" role="listbox" hidden></ul>
     </div>
 
@@ -61,6 +61,11 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5z"/></svg>
     </button>
     <div class="legend-body" id="legend-body">
+      <div class="views" role="radiogroup" aria-label="Ansicht">
+        <label><input type="radio" name="view" value="gemeinden" checked><span>Gemeinden</span></label>
+        <label><input type="radio" name="view" value="kantone"><span>Kantone</span></label>
+      </div>
+
       <h2>Abstimmungsergebnisse und Velowege</h2>
 
       <div class="tree">
@@ -95,7 +100,7 @@
       <h2>Ebenen</h2>
       <div class="toggles">
         <label><input type="checkbox" id="tg-cantons-pts" checked> Unfall-Symbole (Kantone)</label>
-        <label><input type="checkbox" id="tg-borders" checked> Kantonsgrenzen</label>
+        <label><input type="checkbox" id="tg-borders" checked> Kantonsgrenzen (Ansicht Gemeinden)</label>
         <label><input type="checkbox" id="tg-labels" checked> Gemeindenamen (ab Zoom 10)</label>
       </div>
 

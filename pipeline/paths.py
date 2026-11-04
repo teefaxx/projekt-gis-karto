@@ -38,6 +38,13 @@ BOUNDARIES_URL = (
     "https://data.geo.admin.ch/ch.swisstopo.swissboundaries3d/swissboundaries3d_2023-01/"
     "swissboundaries3d_2023-01_2056_5728.gpkg.zip"
 )
+# swisstopo swissTLM3D 2023 (nur Bodenbedeckung wird per HTTP-Range geladen) -> Seeflächen
+TLM3D_SHP_URL = (
+    "https://data.geo.admin.ch/ch.swisstopo.swisstlm3d/swisstlm3d_2023-03/"
+    "swisstlm3d_2023-03_2056_5728.shp.zip"
+)
+RAW_LAKES_GPKG = RAW_DIR / "swisstlm3d" / "seen.gpkg"
+MIN_LAKE_AREA = 50_000  # m², kleinere Gewässer werden nicht aus den Gemeinden ausgeschnitten
 RAW_OSM_ROADS_SHP = (
     RAW_DIR / "OSM_new" / "switzerland-latest-free.shp" / "gis_osm_roads_free_1.shp"
 )  # Geofabrik OSM-Export

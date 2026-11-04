@@ -5,13 +5,19 @@ Gemeindegrenzen: offizielle Hoheitsgebiete aus swissBOUNDARIES3D (swisstopo, Sta
 Zoomstufe wird mit ``shapely.coverage_simplify`` vereinfacht. Gemeinsame Grenzen
 werden dabei nur einmal vereinfacht, so entstehen keine Lücken zwischen Gemeinden.
 In Zoom 12 entspricht die Geometrie den Originaldaten (Auflösung ~1.6 m).
+
+Die Seen (swissTLM3D) werden aus den Gemeindeflächen ausgeschnitten und zusammen mit
+ihnen vereinfacht. So bleibt über einer Basiskarte der See frei, und ohne Basiskarte
+schliesst die Seefläche lückenlos an die Gemeinden an.
 Die Karte vergrössert ab Zoom 12 die Kacheln weiter.
 
 Ausgabe in ``web/data/``:
 
-* ``tiles/{z}/{x}/{y}.pbf``  Layer ``gemeinden`` (Flächen), ``kantone`` (Grenzlinien),
+* ``tiles/{z}/{x}/{y}.pbf``  Layer ``gemeinden`` (Flächen ohne Seen), ``seen`` (Seeflächen
+                             aus swissTLM3D), ``kantone`` (Grenzlinien), ``kantone_flaechen``,
                              ``labels`` (Namenspunkte)
 * ``gemeinden.json``         Kennzahlen und Ausdehnung (bbox) pro Gemeinde
+* ``kantone.json``           Kennzahlen pro Kanton (Abstimmung, Velowege, Unfälle)
 * ``kantone_punkte.geojson`` Kantonssymbole mit Velounfällen pro 100'000 EW
 * ``meta.json``              Schwellenwerte, Klassengrenzen, Metadaten
 
@@ -31,7 +37,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import shapely
-from mapbox_vector_tile import encode
+from mapbox_vector_tile import decode, encode
 from mapbox_vector_tile.encoder import on_invalid_geometry_make_valid
 
 from pipeline import prepare
@@ -39,6 +45,7 @@ from pipeline.paths import (
     BIKE_THRESHOLD,
     CANTON_ACCIDENTS,
     FINAL_VALUES,
+    INTERIM_POPULATION,
     INTERIM_RESULTS,
     ROOT_DIR,
     YES_THRESHOLD_DECIMALS,
@@ -83,6 +90,7 @@ def load_areas() -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
             "BFSNR": results["GMDNR"],
             "urne": results["GMDNAME_x"].str.extract(r"Standort: ([^)]*?)\s*\)")[0],
             "voters": pd.to_numeric(results["Stimmberechtigte"], errors="coerce"),
+            "cast": pd.to_numeric(results["Abgegebene Stimmen"], errors="coerce"),
             "turnout": pd.to_numeric(results["Beteiligung in %"], errors="coerce"),
             "ja": pd.to_numeric(results["Ja"], errors="coerce"),
             "nein": pd.to_numeric(results["Nein"], errors="coerce"),
@@ -115,6 +123,7 @@ def attribute_table(attrs: pd.DataFrame, areas: gpd.GeoDataFrame) -> list[dict]:
     """Kennzahlen pro Gemeinde (und Kommunanz) inkl. Ausdehnung in WGS84."""
     bounds = areas.to_crs("EPSG:4326").set_index("id").bounds.round(5)
     attrs = attrs.set_index("BFSNR")
+    pop_source = pd.read_csv(INTERIM_POPULATION).set_index("BFSNR")["SOURCE"]
     rows = []
     for a in areas.itertuples():
         if a.cls == CLS_LAKE:
@@ -142,6 +151,9 @@ def attribute_table(attrs: pd.DataFrame, areas: gpd.GeoDataFrame) -> list[dict]:
                 ja=_num(r["ja"]),
                 nein=_num(r["nein"]),
                 urne=None if pd.isna(r["urne"]) else r["urne"],
+                pop_src="swissBOUNDARIES3D"
+                if str(pop_source.get(a.id, "")).startswith("swissBOUNDARIES3D")
+                else "BFS",
             )
         rows.append(row)
     return rows
@@ -214,6 +226,45 @@ def canton_points() -> tuple[gpd.GeoDataFrame, list[str]]:
     return gdf, labels
 
 
+def canton_table(attrs: pd.DataFrame, areas: gpd.GeoDataFrame, pts: gpd.GeoDataFrame) -> list:
+    """Kennzahlen pro Kanton, aus den Gemeindewerten summiert.
+
+    Ja-Anteil = Summe Ja / (Summe Ja + Nein), entspricht dem offiziellen Kantonsresultat
+    (Gemeinden mit gemeinsamer Urne sind in der Standortgemeinde enthalten).
+    """
+    bounds = areas[areas["cls"] != CLS_LAKE].dissolve("kt").to_crs("EPSG:4326").bounds.round(4)
+    a = attrs.copy()
+    a["cls"] = a["VALUE"].fillna(CLS_NO_DATA).astype(int)
+    rows = []
+    for p in pts.sort_values("acc100k", ascending=False).itertuples():
+        g = a[a["KTNR"] == p.kt]
+        ja, nein = g["ja"].sum(), g["nein"].sum()
+        b = bounds.loc[p.kt]
+        rows.append(
+            {
+                "id": int(p.kt),
+                "name": p.name,
+                "abbr": p.abbr,
+                "bbox": [b.minx, b.miny, b.maxx, b.maxy],
+                "yes": round(ja / (ja + nein) * 100, 2),
+                "ja": int(ja),
+                "nein": int(nein),
+                "turnout": round(g["cast"].sum() / g["voters"].sum() * 100, 1),
+                "bike": round(g["BIKE_LENGTH"].sum() / g["STREET_LENGTH"].sum() * 100, 2),
+                "bike_km": round(g["BIKE_LENGTH"].sum() / 1000, 1),
+                "street_km": round(g["STREET_LENGTH"].sum() / 1000, 1),
+                "acc": int(p.acc),
+                "pop": int(p.pop),
+                "acc100k": float(p.acc100k),
+                "accClass": int(p.accClass),
+                "rank": len(rows) + 1,
+                "municipalities": int(len(g)),
+                "classes": {str(k): int(v) for k, v in g["cls"].value_counts().items()},
+            }
+        )
+    return rows
+
+
 # --------------------------------------------------------------------------
 # Vektorkacheln
 # --------------------------------------------------------------------------
@@ -239,23 +290,83 @@ def _tolerance(z: int) -> float:
     return 0.5 * 2 * WEB_MERCATOR_HALF / (512 * 2**z)
 
 
-def _layer(name, geoms, props, ids, tree, rect):
+def _to_tile(geom, tile):
+    """In Kachelkoordinaten (0..EXTENT, y nach oben) umrechnen und auf ganze Zahlen runden.
+
+    Das Runden erledigen wir selbst und reparieren danach die Geometrie: Der Encoder
+    würde Flächen, die durch das Runden ungültig werden, sonst stillschweigend verwerfen.
+    """
+    minx, miny, maxx, maxy = tile
+    scale = np.array([EXTENT / (maxx - minx), EXTENT / (maxy - miny)])
+    offset = np.array([minx, miny])
+    g = shapely.transform(geom, lambda xy: (xy - offset) * scale)
+    g = shapely.set_precision(g, 1.0)
+    if g.geom_type in ("Polygon", "MultiPolygon", "GeometryCollection"):
+        g = _polygonal(np.array([g]))[0]
+    return g
+
+
+def _layer(name, geoms, props, ids, tree, rect, tile):
     features = []
     for i in tree.query(shapely.box(*rect)):
-        g = shapely.clip_by_rect(geoms[i], *rect)
+        g = _to_tile(shapely.clip_by_rect(geoms[i], *rect), tile)
         if not g.is_empty:
             features.append({"geometry": g, "properties": props[i], "id": ids[i]})
     return {"name": name, "features": features} if features else None
 
 
-def write_tiles(areas: gpd.GeoDataFrame) -> int:
+def _polygonal(geoms: np.ndarray) -> np.ndarray:
+    """Gültige (Multi-)Polygone; Linien/Punkte aus make_valid werden verworfen."""
+    out = shapely.make_valid(geoms)
+    for i, g in enumerate(out):
+        if g.geom_type == "GeometryCollection":
+            polys = [p for p in shapely.get_parts(g) if p.geom_type in ("Polygon", "MultiPolygon")]
+            out[i] = shapely.union_all(polys) if polys else shapely.Polygon()
+    return out
+
+
+GRID = 0.01  # gemeinsames Koordinatenraster (m), damit Nachbarflächen exakt aufeinanderpassen
+
+
+def _cut_lakes(geoms: np.ndarray, lakes: np.ndarray) -> np.ndarray:
+    """Gemeindeflächen ohne Seen (Differenz nur dort, wo sich beide schneiden)."""
+    geoms = geoms.copy()
+    lake_union = shapely.union_all(lakes, grid_size=GRID)
+    shapely.prepare(lake_union)
+    hit = shapely.intersects(geoms, lake_union)
+    geoms[hit] = shapely.difference(geoms[hit], lake_union, grid_size=GRID)
+    return geoms
+
+
+def write_tiles(areas: gpd.GeoDataFrame, lakes: gpd.GeoDataFrame) -> int:
     merc = areas.to_crs("EPSG:3857")
-    base = shapely.make_valid(merc.geometry.values)
-    props = [{"id": int(r.id), "cls": int(r.cls), "kt": int(r.kt)} for r in merc.itertuples()]
-    ids = [int(i) for i in merc["id"]]
+    lakes_m = lakes.to_crs("EPSG:3857")
+    # Alle Flächen auf dasselbe Raster setzen, sonst entstehen Lücken zwischen Nachbarn
+    uncut = _polygonal(shapely.set_precision(merc.geometry.values, GRID))
+    lake_geoms = _polygonal(shapely.set_precision(lakes_m.geometry.values, GRID))
+    cut = _polygonal(_cut_lakes(uncut, lake_geoms))
+    keep = ~shapely.is_empty(cut)
+    n_areas = int(keep.sum())
+    # Gemeinden (ohne Seen) und Seen bilden zusammen eine lückenlose Abdeckung
+    # Seeteile ausserhalb der Schweiz und Überlappungen mit Gemeinden ausschliessen
+    lake_geoms = shapely.intersection(
+        lake_geoms, shapely.union_all(uncut, grid_size=GRID), grid_size=GRID
+    )
+    lake_geoms = _polygonal(lake_geoms)
+    coverage = np.concatenate([cut[keep], lake_geoms])
+    kts = merc["kt"].to_numpy()
+
+    props = [
+        {"id": int(r.id), "cls": int(r.cls), "kt": int(r.kt)}
+        for r, k in zip(merc.itertuples(), keep, strict=True)
+        if k
+    ]
+    ids = [p["id"] for p in props]
+    lake_props = [{"see": 1}] * len(lakes_m)
+    lake_ids = list(range(1, len(lakes_m) + 1))
 
     label_mask = merc["cls"].to_numpy() != CLS_LAKE
-    lbl_geoms = shapely.point_on_surface(base)[label_mask]
+    lbl_geoms = shapely.point_on_surface(uncut)[label_mask]
     lbl_props = [{"id": int(r.id), "name": r.name} for r in merc[label_mask].itertuples()]
     lbl_ids = [int(i) for i in merc.loc[label_mask, "id"]]
     lbl_tree = shapely.STRtree(lbl_geoms)
@@ -264,44 +375,71 @@ def write_tiles(areas: gpd.GeoDataFrame) -> int:
         shutil.rmtree(TILES_DIR)
     count = 0
     for z in range(MIN_ZOOM, MAX_ZOOM + 1):
-        geoms = shapely.make_valid(shapely.coverage_simplify(base, tolerance=_tolerance(z)))
-        poly_tree = shapely.STRtree(geoms)
+        tol = _tolerance(z)
+        simple = _polygonal(shapely.coverage_simplify(coverage, tolerance=tol))
+        gem, see = simple[:n_areas], simple[n_areas:]
+        gem_tree, see_tree = shapely.STRtree(gem), shapely.STRtree(see)
 
-        cantons = merc.assign(geometry=geoms).dissolve("kt")
-        canton_lines = shapely.boundary(cantons.geometry.values)
+        # Kantone aus den nicht beschnittenen Gemeinden (Grenzen laufen durch die Seen)
+        full = _polygonal(shapely.coverage_simplify(uncut, tolerance=tol))
+        cantons = gpd.GeoDataFrame({"kt": kts}, geometry=full, crs="EPSG:3857").dissolve("kt")
+        canton_polys = cantons.geometry.values
+        canton_lines = shapely.boundary(canton_polys)
         canton_props = [{"kt": int(k)} for k in cantons.index]
         canton_ids = [int(k) for k in cantons.index]
-        canton_tree = shapely.STRtree(canton_lines)
+        cpoly_tree, cline_tree = shapely.STRtree(canton_polys), shapely.STRtree(canton_lines)
 
-        xs, ys = _tile_range(shapely.total_bounds(geoms), z)
+        xs, ys = _tile_range(shapely.total_bounds(full), z)
         for x in xs:
             for y in ys:
                 tile = _tile_bounds(z, x, y)
                 pad = (tile[2] - tile[0]) * BUFFER / EXTENT
                 rect = (tile[0] - pad, tile[1] - pad, tile[2] + pad, tile[3] + pad)
                 layers = [
-                    _layer("gemeinden", geoms, props, ids, poly_tree, rect),
-                    _layer("kantone", canton_lines, canton_props, canton_ids, canton_tree, rect),
+                    _layer("gemeinden", gem, props, ids, gem_tree, rect, tile),
+                    _layer("seen", see, lake_props, lake_ids, see_tree, rect, tile),
+                    _layer(
+                        "kantone_flaechen",
+                        canton_polys,
+                        canton_props,
+                        canton_ids,
+                        cpoly_tree,
+                        rect,
+                        tile,
+                    ),
+                    _layer(
+                        "kantone", canton_lines, canton_props, canton_ids, cline_tree, rect, tile
+                    ),
                 ]
                 if z >= LABEL_MIN_ZOOM:
-                    layers.append(_layer("labels", lbl_geoms, lbl_props, lbl_ids, lbl_tree, tile))
+                    layers.append(
+                        _layer("labels", lbl_geoms, lbl_props, lbl_ids, lbl_tree, tile, tile)
+                    )
                 layers = [layer for layer in layers if layer]
-                if not layers:
+                if not any(layer["name"] in ("gemeinden", "kantone_flaechen") for layer in layers):
                     continue
                 data = encode(
                     layers,
                     default_options={
-                        "quantize_bounds": tile,
                         "extents": EXTENT,
                         "y_coord_down": False,
                         "on_invalid_geometry": on_invalid_geometry_make_valid,
                     },
                 )
+                # Kontrolle: Der Encoder darf keine Fläche verwerfen
+                decoded = decode(data)
+                for layer in layers:
+                    kept = len(decoded.get(layer["name"], {}).get("features", []))
+                    if kept != len(layer["features"]):
+                        raise RuntimeError(
+                            f"Kachel {z}/{x}/{y}: {len(layer['features']) - kept} Objekte im "
+                            f"Layer {layer['name']} verworfen"
+                        )
                 out = TILES_DIR / str(z) / str(x) / f"{y}.pbf"
                 out.parent.mkdir(parents=True, exist_ok=True)
                 out.write_bytes(data)
                 count += 1
-        print(f"  Zoom {z:2d}: Toleranz {_tolerance(z):7.1f} m")
+        print(f"  Zoom {z:2d}: Toleranz {tol:7.1f} m")
     return count
 
 
@@ -321,7 +459,8 @@ def main() -> None:
         (WEB_DATA / old).unlink(missing_ok=True)
 
     areas, attrs = load_areas()
-    n = write_tiles(areas)
+    lakes = prepare.lakes()
+    n = write_tiles(areas, lakes)
     size = sum(p.stat().st_size for p in TILES_DIR.rglob("*.pbf"))
     print(f"  web/data/tiles  {n} Kacheln, {size / 1e6:.1f} MB")
 
@@ -330,6 +469,7 @@ def main() -> None:
     pts, acc_labels = canton_points()
     pts_path = WEB_DATA / "kantone_punkte.geojson"
     pts_path.write_text(pts.to_crs("EPSG:4326").to_json(drop_id=True), encoding="utf-8")
+    _write_json("kantone.json", canton_table(attrs, areas, pts))
 
     valid_yes = attrs["YES_IN_PER"].dropna()
     meta = {

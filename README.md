@@ -45,19 +45,26 @@ Die Webkarte übernimmt die Gestaltung der gedruckten Karte ([`map/`](map/)) und
 - **Gemeinden:** Dargestellt sind die offiziellen Gemeindegrenzen
   ([swissBOUNDARIES3D](https://www.swisstopo.admin.ch/de/landschaftsmodell-swissboundaries3d),
   Stand 1.1.2023) als Vektorkacheln. In hohen Zoomstufen entsprechen sie den Originaldaten
-  (~1.6&nbsp;m). Seen und Flüsse stammen aus der swisstopo-Basiskarte, deshalb passen
-  Gemeindeflächen und Ufer lückenlos zusammen.
+  (~1.6&nbsp;m).
+- **Seen:** Die Seeflächen aus [swissTLM3D](https://www.swisstopo.admin.ch/de/landschaftsmodell-swisstlm3d)
+  sind aus den Gemeinden ausgeschnitten. Mit einer Basiskarte bleiben die Seen deshalb frei und
+  zeigen die Basiskarte.
 - **Hintergrund:** wahlweise ohne (wie die Druckkarte), swisstopo-Basiskarte (Vektor), Landeskarte
   farbig oder grau, oder das Luftbild SWISSIMAGE.
-- **Details:** Ein Klick auf eine Gemeinde zeigt Ja-Anteil, Stimmen, Veloweg-Anteil, Unfälle und
-  Einwohnerzahl im Vergleich zu den Schwellenwerten.
-- **Suche und Direktlinks:** Gemeindesuche mit Tastatursteuerung, Direktlinks wie
-  [`#gemeinde=159`](https://teefaxx.github.io/projekt-gis-karto/#gemeinde=159).
+- **Gemeinden und Kantone:** Ein Klick auf eine Gemeinde zeigt Ja-Anteil, Stimmen, Veloweg-Anteil,
+  Unfälle und Einwohnerzahl im Vergleich zu den Schwellenwerten. In der Ansicht *Kantone* sind die
+  Gemeinden ausgegraut. Ein Klick auf einen Kanton oder sein Unfallsymbol zeigt die Kantonswerte
+  und die Verteilung der Gemeinden auf die vier Klassen.
+- **Quellen:** Zu jeder Kennzahl ist die Datenquelle verlinkt.
+- **Suche und Direktlinks:** Suche nach Gemeinden und Kantonen mit Tastatursteuerung, Direktlinks
+  wie [`#gemeinde=159`](https://teefaxx.github.io/projekt-gis-karto/#gemeinde=159) oder
+  [`#kanton=1`](https://teefaxx.github.io/projekt-gis-karto/#kanton=1).
 - **Legende:** Klassen lassen sich ein- und ausblenden. Dazu kommen Kantonssymbole mit Unfallraten.
 - **Bericht:** Der Projektbericht öffnet sich als PDF im Browser.
 - Die Karte funktioniert auch auf dem Handy.
 
 <img src="docs/webkarte-detail.png" alt="Detailansicht einer Gemeinde mit swisstopo-Basiskarte" width="720">
+<img src="docs/webkarte-kanton.png" alt="Kantonsansicht mit ausgegrauten Gemeinden" width="720">
 
 Lokal starten:
 
@@ -74,7 +81,7 @@ sobald `web/` oder `reports/` auf `main` geändert wird. Der Workflow kopiert de
 
 ```
 ├── pipeline/            Python-Datenverarbeitung (python -m pipeline …)
-│   ├── prepare.py       Rohdaten → data/interim/ (lädt öffentliche Daten selbst herunter)
+│   ├── prepare.py       Rohdaten → data/interim/ (lädt öffentliche swisstopo-/ASTRA-Daten selbst)
 │   ├── build.py         data/interim/ → data/processed/ (Kennzahlen, Klassifikation)
 │   ├── analysis.py      Korrelationen und Diagramme
 │   └── webdata.py       Vektorkacheln und JSON für die Webkarte
@@ -95,7 +102,7 @@ pip install -e ".[dev]"        # oder: pip install -r requirements.txt
 python -m pipeline prepare     # Unfälle (ASTRA) und Gemeindegrenzen laden, data/interim aktualisieren
 python -m pipeline build       # data/interim → data/processed   (~5 s)
 python -m pipeline analyze     # Korrelationen + reports/figures/
-python -m pipeline webdata     # web/data/ (Vektorkacheln, ~40 s)
+python -m pipeline webdata     # web/data/ (Vektorkacheln, ~3 min; lädt beim ersten Mal ~1 GB swissTLM3D)
 pytest
 ```
 
@@ -107,6 +114,7 @@ flowchart LR
     R3[OSM + Veloland]
     R4[BFS Bevölkerung 2021]
     R5[swissBOUNDARIES3D<br><i>Download</i>]
+    R6[swissTLM3D Seen<br><i>Download</i>]
   end
   R1 -->|prepare| I1[results_bfs.geojson]
   R2 -->|prepare| I2[accidents.geojson]
@@ -115,7 +123,7 @@ flowchart LR
   OSM[OSM Strassennetz] -.->|QGIS: Länge je Gemeinde| I6[street_lengths_qgis.csv]
   I1 & I2 & I3 & I4 & I6 -->|build| P[final_values.geojson<br>canton_accidents.csv]
   P -->|analyze| F[Diagramme]
-  P & R5 -->|webdata| W[web/data]
+  P & R5 & R6 -->|webdata| W[web/data]
 ```
 
 Die frühere Kette aus acht Skripten, einem ArcGIS-Schritt und Zwischen-GeoJSONs
@@ -156,6 +164,6 @@ in `map/` zeigt weiterhin den Stand des Berichts.
 ## Datenquellen
 
 Bundesamt für Statistik (BFS: Gemeindegrenzen, Abstimmungsresultate, Bevölkerung) ·
-Bundesamt für Landestopografie swisstopo (swissBOUNDARIES3D, Basiskarten, Landeskarten, SWISSIMAGE) ·
+Bundesamt für Landestopografie swisstopo (swissBOUNDARIES3D, swissTLM3D, Basiskarten, Landeskarten, SWISSIMAGE) ·
 Bundesamt für Strassen ASTRA (Strassenverkehrsunfälle mit Personenschaden) ·
 Veloland Schweiz · © OpenStreetMap-Mitwirkende (ODbL)

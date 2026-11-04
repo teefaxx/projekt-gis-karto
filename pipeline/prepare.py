@@ -19,6 +19,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
+import shapely
 
 from . import paths
 
@@ -52,6 +53,70 @@ def download(url: str, target: Path) -> Path:
     member = next(n for n in archive.namelist() if Path(n).name == target.name)
     target.write_bytes(archive.read(member))
     return target
+
+
+def download_zip_members(url: str, members: list[str], target_dir: Path) -> list[Path]:
+    """Lädt einzelne Dateien aus einem entfernten ZIP (HTTP-Range), ohne das ganze Archiv.
+
+    Nützlich für swissTLM3D (3.4 GB), von dem nur die Bodenbedeckung gebraucht wird.
+    """
+    import struct
+    import zlib
+
+    def fetch(start: int, end: int) -> bytes:
+        req = urllib.request.Request(url, headers={"Range": f"bytes={start}-{end}"})
+        with urllib.request.urlopen(req, timeout=600) as resp:
+            return resp.read()
+
+    targets = [target_dir / Path(m).name for m in members]
+    if all(t.exists() for t in targets):
+        return targets
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    with urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=60) as r:
+        size = int(r.headers["Content-Length"])
+    tail = fetch(max(0, size - 65_536), size - 1)
+    eocd = tail.rfind(b"PK\x05\x06")
+    cd_size, cd_offset = struct.unpack("<II", tail[eocd + 12 : eocd + 20])
+    if cd_offset == 0xFFFFFFFF:  # ZIP64
+        z64 = tail.rfind(b"PK\x06\x06")
+        cd_size, cd_offset = struct.unpack("<QQ", tail[z64 + 40 : z64 + 56])
+    cd = fetch(cd_offset, cd_offset + cd_size - 1)
+
+    entries, pos = {}, 0
+    while cd[pos : pos + 4] == b"PK\x01\x02":
+        method = struct.unpack("<H", cd[pos + 10 : pos + 12])[0]
+        csize, usize = struct.unpack("<II", cd[pos + 20 : pos + 28])
+        n_len, e_len, c_len = struct.unpack("<HHH", cd[pos + 28 : pos + 34])
+        offset = struct.unpack("<I", cd[pos + 42 : pos + 46])[0]
+        name = cd[pos + 46 : pos + 46 + n_len].decode()
+        extra = cd[pos + 46 + n_len : pos + 46 + n_len + e_len]
+        k = 0
+        while k < len(extra):  # ZIP64-Erweiterung: echte Grössen und Offset
+            hid, hlen = struct.unpack("<HH", extra[k : k + 4])
+            if hid == 1:
+                vals = list(struct.unpack("<" + "Q" * (hlen // 8), extra[k + 4 : k + 4 + hlen]))
+                if usize == 0xFFFFFFFF:
+                    usize = vals.pop(0)
+                if csize == 0xFFFFFFFF:
+                    csize = vals.pop(0)
+                if offset == 0xFFFFFFFF:
+                    offset = vals.pop(0)
+            k += 4 + hlen
+        entries[name] = (method, csize, offset)
+        pos += 46 + n_len + e_len + c_len
+
+    for member, target in zip(members, targets, strict=True):
+        if target.exists():
+            continue
+        method, csize, offset = entries[member]
+        header = fetch(offset, offset + 29)
+        n_len, e_len = struct.unpack("<HH", header[26:30])
+        start = offset + 30 + n_len + e_len
+        print(f"Lade {member} ({csize / 1e6:.0f} MB) …")
+        data = fetch(start, start + csize - 1)
+        target.write_bytes(zlib.decompress(data, -15) if method == 8 else data)
+    return targets
 
 
 def _to_lv95(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -220,6 +285,32 @@ def official_municipalities(path: Path = paths.RAW_BOUNDARIES_GPKG) -> gpd.GeoDa
         },
     ).reset_index()
     return _to_lv95(out)
+
+
+def lakes(path: Path = paths.RAW_LAKES_GPKG) -> gpd.GeoDataFrame:
+    """Seeflächen aus swissTLM3D (Bodenbedeckung «Stehende Gewaesser»), LV95, 2D.
+
+    Gleiche Datengrundlage wie die Gewässer der swisstopo-Karten. Nur Flächen ab
+    ``paths.MIN_LAKE_AREA`` m² (kleine Weiher sind für die Karte unerheblich).
+    """
+    if path.exists():
+        return gpd.read_file(path)
+    raw_dir = paths.RAW_DIR / "swisstlm3d"
+    parts = []
+    for region in ("OST", "WEST"):
+        base = f"TLM_BB/swissTLM3D_TLM_BODENBEDECKUNG_{region}"
+        files = download_zip_members(
+            paths.TLM3D_SHP_URL, [f"{base}.{ext}" for ext in ("shp", "shx", "dbf", "prj")], raw_dir
+        )
+        gdf = gpd.read_file(files[0], columns=["OBJEKTART"])
+        parts.append(gdf[gdf["OBJEKTART"] == "Stehende Gewaesser"])
+    water = pd.concat(parts, ignore_index=True)
+    water["geometry"] = shapely.make_valid(water.geometry.force_2d().values)
+    merged = shapely.union_all(water.geometry.values)
+    polys = gpd.GeoDataFrame(geometry=[merged], crs=paths.CRS).explode(ignore_index=True)
+    polys = polys[polys.area >= paths.MIN_LAKE_AREA].reset_index(drop=True)
+    polys.to_file(path, driver="GPKG")
+    return polys
 
 
 def fill_population_gaps(population: pd.DataFrame, municipality_ids: pd.Series) -> pd.DataFrame:
