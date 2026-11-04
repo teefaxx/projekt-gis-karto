@@ -24,6 +24,12 @@
       Die Karte zeigt pro Gemeinde, ob Velowege und Ja-Stimmen über dem Durchschnitt liegen,
       dazu die Velounfälle pro 100'000 Einwohner je Kanton.
     </p>
+    <p class="report-link">
+      <a href="bericht.pdf" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm7 1.5V9h5.5L13 3.5ZM8 13v2h8v-2H8Zm0 4v2h5v-2H8Z"/></svg>
+        Projektbericht (PDF)
+      </a>
+    </p>
 
     <div class="search" role="search">
       <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg>
@@ -71,18 +77,34 @@
         </div>
         <p class="hint">Klick auf ein Feld blendet die Klasse ein/aus.</p>
         <p class="nodata"><i></i> Keine eigenen Abstimmungsdaten (gemeinsame Urne)</p>
+        <p class="nodata"><i class="komm"></i> Kein Gemeindegebiet (Kommunanz, Staatswald)</p>
       </div>
 
-      <h2>Velounfälle pro 100'000 Einwohner <small>Mittel der Gemeinden je Kanton</small></h2>
+      <h2>Velounfälle pro 100'000 Einwohner <small>je Kanton, Januar 2011 – September 2018</small></h2>
       <ul class="circles" id="circle-legend"></ul>
+
+      <h2>Hintergrund</h2>
+      <div class="basemaps" role="radiogroup" aria-label="Hintergrundkarte">
+        <label><input type="radio" name="basemap" value="none" checked><span>Ohne (wie Druckkarte)</span></label>
+        <label><input type="radio" name="basemap" value="light"><span>swisstopo Basiskarte</span></label>
+        <label><input type="radio" name="basemap" value="farbe"><span>Landeskarte farbig</span></label>
+        <label><input type="radio" name="basemap" value="grau"><span>Landeskarte grau</span></label>
+        <label><input type="radio" name="basemap" value="luftbild"><span>Luftbild SWISSIMAGE</span></label>
+      </div>
 
       <h2>Ebenen</h2>
       <div class="toggles">
         <label><input type="checkbox" id="tg-cantons-pts" checked> Unfall-Symbole (Kantone)</label>
         <label><input type="checkbox" id="tg-borders" checked> Kantonsgrenzen</label>
         <label><input type="checkbox" id="tg-labels" checked> Gemeindenamen (ab Zoom 10)</label>
-        <label><input type="checkbox" id="tg-basemap"> Landeskarte grau (swisstopo)</label>
       </div>
+
+      <p class="sources">
+        Autor: Dario De Luca · Daten: BFS (Abstimmung, Bevölkerung) · swisstopo (swissBOUNDARIES3D,
+        Basiskarten) · ASTRA (Strassenverkehrsunfälle) · Veloland Schweiz · © OpenStreetMap-Mitwirkende<br>
+        <a href="bericht.pdf" target="_blank" rel="noopener">Bericht (PDF)</a> ·
+        <a href="https://github.com/teefaxx/projekt-gis-karto">Code auf GitHub</a>
+      </p>
     </div>
   </aside>
 
@@ -96,11 +118,6 @@
 
   <div class="tooltip" id="tooltip" hidden></div>
 
-  <footer class="credits">
-    <span>Autor: Dario De Luca</span>
-    <span>Daten: BFS · swisstopo · ASTRA (Strassenverkehrsunfälle) · Veloland Schweiz · OpenStreetMap-Mitwirkende</span>
-    <a href="https://github.com/teefaxx/projekt-gis-karto">Code &amp; Bericht auf GitHub</a>
-  </footer>
 
   <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
   <script type="module" src="app.js"></script>

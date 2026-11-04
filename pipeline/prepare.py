@@ -1,13 +1,20 @@
 """Rohdaten (data/raw/) -> Zwischenstände (data/interim/).
 
 Portierung von src/get_data/{results_data,accidents_data,bike_data}.py und
-src/add_population.py (read_pop_new). Die Rohdaten sind nicht im Repo; der
-ursprüngliche Download-Link ist abgelaufen. Die Zwischenstände in data/interim/
-sind versioniert, `python -m pipeline build` braucht diese Schritte also nicht.
+src/add_population.py (read_pop_new). Die Zwischenstände in data/interim/ sind
+versioniert, `python -m pipeline build` braucht diese Schritte also nicht.
+
+Öffentlich verfügbare Rohdaten (ASTRA-Unfälle, swissBOUNDARIES3D) werden bei
+Bedarf von data.geo.admin.ch heruntergeladen. Die übrigen Rohdaten (ehemals
+data.zip) sind nicht im Repo; fehlen sie, werden die betroffenen Schritte
+übersprungen.
 """
 
 from __future__ import annotations
 
+import io
+import urllib.request
+import zipfile
 from pathlib import Path
 
 import geopandas as gpd
@@ -32,6 +39,19 @@ def require_raw(*files: Path) -> None:
             "ist abgelaufen. Die Zwischenstände in data/interim/ sind versioniert; "
             "für das Endresultat genügt `python -m pipeline build`."
         )
+
+
+def download(url: str, target: Path) -> Path:
+    """Lädt ein ZIP herunter und entpackt die Datei ``target.name`` nach ``target``."""
+    if target.exists():
+        return target
+    print(f"Lade {url} …")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with urllib.request.urlopen(url, timeout=600) as resp:
+        archive = zipfile.ZipFile(io.BytesIO(resp.read()))
+    member = next(n for n in archive.namelist() if Path(n).name == target.name)
+    target.write_bytes(archive.read(member))
+    return target
 
 
 def _to_lv95(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -89,6 +109,7 @@ def results_with_geometries() -> gpd.GeoDataFrame:
 # Velounfälle
 # --------------------------------------------------------------------------
 ACCIDENT_COLUMNS = [
+    "AccidentUID",
     "AccidentType_de",
     "AccidentSeverityCategory_de",
     "AccidentInvolvingPedestrian",
@@ -102,32 +123,18 @@ ACCIDENT_COLUMNS = [
 ]
 
 
-def bicycle_accidents(path: Path = paths.RAW_ACCIDENTS_JSON) -> gpd.GeoDataFrame:
-    """Unfälle mit Velobeteiligung als Punkte in LV95.
+def bicycle_accidents(path: Path = paths.RAW_ACCIDENTS_CSV) -> gpd.GeoDataFrame:
+    """Unfälle mit Velobeteiligung von 2011 bis und mit ``paths.ACCIDENT_END`` (LV95)."""
+    download(paths.ACCIDENTS_URL, path)
+    df = pd.read_csv(path, usecols=ACCIDENT_COLUMNS, encoding="utf-8-sig")
+    for col in ("AccidentInvolvingBicycle", "AccidentInvolvingPedestrian"):
+        df[col] = df[col].astype(str).str.lower().eq("true")
 
-    Filter: Monat <= 9 und Jahr <= 2018 (siehe Kommentar in paths.py).
-    """
-    require_raw(path)
-    raw = gpd.read_file(path)
-    df = pd.DataFrame(raw[ACCIDENT_COLUMNS])
-
-    to_bool = {"true": True, "false": False}
-    df["AccidentInvolvingBicycle"] = df["AccidentInvolvingBicycle"].str.lower().map(to_bool)
-    df["AccidentInvolvingPedestrian"] = df["AccidentInvolvingPedestrian"].str.lower().map(to_bool)
-    int_cols = [
-        "AccidentYear",
-        "AccidentMonth",
-        "AccidentLocation_CHLV95_E",
-        "AccidentLocation_CHLV95_N",
-    ]
-    df[int_cols] = df[int_cols].astype(int)
-
-    mask = (
-        (df["AccidentMonth"] <= paths.ACCIDENT_MAX_MONTH)
-        & (df["AccidentYear"] <= paths.ACCIDENT_MAX_YEAR)
-        & df["AccidentInvolvingBicycle"].astype(bool)
+    end_year, end_month = paths.ACCIDENT_END
+    period = (df["AccidentYear"] < end_year) | (
+        (df["AccidentYear"] == end_year) & (df["AccidentMonth"] <= end_month)
     )
-    df = df.loc[mask]
+    df = df.loc[df["AccidentInvolvingBicycle"] & period].reset_index(drop=True)
 
     # Geometrie direkt aus den LV95-Koordinaten der Unfallstelle
     geometry = gpd.points_from_xy(
@@ -189,35 +196,94 @@ def population_from_raw(path: Path = paths.RAW_POPULATION_CSV) -> pd.DataFrame:
     return df[["BFSNR", "POP_TOTAL"]]
 
 
+def official_municipalities(path: Path = paths.RAW_BOUNDARIES_GPKG) -> gpd.GeoDataFrame:
+    """Offizielle Hoheitsgebiete der Schweiz (swissBOUNDARIES3D, Stand 1.1.2023).
+
+    Eine Zeile pro BFS-Nummer (Teilflächen zusammengefasst), 2D, LV95. Enthält neben
+    den Gemeinden auch Kommunanzen und kantonale Seeflächen (``objektart``).
+    """
+    download(paths.BOUNDARIES_URL, path)
+    gdf = gpd.read_file(
+        path,
+        layer="tlm_hoheitsgebiet",
+        columns=["bfs_nummer", "name", "kantonsnummer", "objektart", "einwohnerzahl", "icc"],
+    )
+    gdf = gdf[gdf["icc"] == "CH"]
+    gdf["geometry"] = gdf.geometry.force_2d()
+    out = gdf.dissolve(
+        by="bfs_nummer",
+        aggfunc={
+            "name": "first",
+            "kantonsnummer": "first",
+            "objektart": "first",
+            "einwohnerzahl": "sum",
+        },
+    ).reset_index()
+    return _to_lv95(out)
+
+
+def fill_population_gaps(population: pd.DataFrame, municipality_ids: pd.Series) -> pd.DataFrame:
+    """Ergänzt fehlende Bevölkerungszahlen aus swissBOUNDARIES3D 2023-01.
+
+    Die BFS-Tabelle 2021 kennt Gemeinden noch nicht, die 2022/2023 fusioniert haben
+    (z. B. Andelfingen, Böztal, Zurzach). Für diese wird die Einwohnerzahl aus
+    swissBOUNDARIES3D übernommen (Abweichung zu BFS 2021 sonst im Median ~1 %).
+    """
+    official = official_municipalities().set_index("bfs_nummer")["einwohnerzahl"]
+    pop = pd.DataFrame({"BFSNR": municipality_ids}).merge(population, on="BFSNR", how="left")
+    if "SOURCE" not in pop:
+        pop["SOURCE"] = pd.NA
+    pop.loc[pop["POP_TOTAL"].notna() & pop["SOURCE"].isna(), "SOURCE"] = "BFS 2021"
+    missing = pop["POP_TOTAL"].isna()
+    pop.loc[missing, "POP_TOTAL"] = pop.loc[missing, "BFSNR"].map(official)
+    pop.loc[missing, "SOURCE"] = "swissBOUNDARIES3D 2023-01"
+    pop["POP_TOTAL"] = pop["POP_TOTAL"].astype(int)
+    return pop[["BFSNR", "POP_TOTAL", "SOURCE"]]
+
+
 # --------------------------------------------------------------------------
 # Ausführen
 # --------------------------------------------------------------------------
 def main(interim_dir: Path = paths.INTERIM_DIR) -> None:
-    """Erzeugt alle Zwischenstände aus den Rohdaten."""
-    require_raw(
-        paths.RAW_BFS_SHP,
-        paths.RAW_RESULTS_XLSX,
-        paths.RAW_ACCIDENTS_JSON,
-        paths.RAW_OSM_ROADS_SHP,
-        paths.RAW_VELOLAND_SHP,
-        paths.RAW_POPULATION_CSV,
-    )
+    """Erzeugt die Zwischenstände, soweit die Rohdaten verfügbar sind."""
+    interim_dir = Path(interim_dir)
     interim_dir.mkdir(parents=True, exist_ok=True)
 
-    targets = {
-        paths.INTERIM_RESULTS.name: results_with_geometries,
-        paths.INTERIM_ACCIDENTS.name: bicycle_accidents,
-        paths.INTERIM_BIKES.name: bike_network,
-    }
-    for name, func in targets.items():
+    def write(gdf: gpd.GeoDataFrame, name: str) -> None:
         out = interim_dir / name
-        func().to_file(out, driver="GeoJSON")
-        print(f"Geschrieben: {out}")
+        if out.exists():
+            out.unlink()
+        gdf.to_file(out, driver="GeoJSON")
+        print(f"Geschrieben: {out} ({len(gdf)} Objekte)")
 
+    # 1) Abstimmungsresultate + Geometrien (data.zip)
+    if paths.RAW_BFS_SHP.exists() and paths.RAW_RESULTS_XLSX.exists():
+        write(results_with_geometries(), paths.INTERIM_RESULTS.name)
+    else:
+        print("Übersprungen: results_bfs (Rohdaten aus data.zip fehlen)")
+
+    # 2) Velounfälle (öffentlich, wird heruntergeladen)
+    write(bicycle_accidents(), paths.INTERIM_ACCIDENTS.name)
+
+    # 3) Velowege (data.zip)
+    if paths.RAW_OSM_ROADS_SHP.exists() and paths.RAW_VELOLAND_SHP.exists():
+        write(bike_network(), paths.INTERIM_BIKES.name)
+    else:
+        print("Übersprungen: bikes (Rohdaten aus data.zip fehlen)")
+
+    # 4) Bevölkerung: BFS 2021 (data.zip) bzw. versionierte Tabelle, Lücken ergänzen
     out = interim_dir / paths.INTERIM_POPULATION.name
-    population_from_raw().to_csv(out, index=False)
+    if paths.RAW_POPULATION_CSV.exists():
+        population = population_from_raw()
+    else:
+        population = pd.read_csv(out)
+        population = (
+            population[population["SOURCE"].ne("swissBOUNDARIES3D 2023-01")]
+            if "SOURCE" in population
+            else population
+        )
+        population = population.dropna(subset=["POP_TOTAL"])
+    ids = gpd.read_file(interim_dir / paths.INTERIM_RESULTS.name, columns=["GMDNR"])["GMDNR"]
+    fill_population_gaps(population, ids).to_csv(out, index=False)
     print(f"Geschrieben: {out}")
-    print(
-        "Hinweis: bike_lengths_arcgis.csv und street_lengths_qgis.csv stammen aus manuellen "
-        "GIS-Schritten und werden hier nicht erzeugt (siehe build --recompute-bike-lengths)."
-    )
+    print("Hinweis: street_lengths_qgis.csv stammt aus einem manuellen QGIS-Schritt.")

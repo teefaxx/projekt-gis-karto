@@ -3,7 +3,7 @@ name: Webkarte veröffentlichen
 on:
   push:
     branches: [main]
-    paths: ["web/**", ".github/workflows/pages.yml"]
+    paths: ["web/**", "reports/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -23,6 +23,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Projektbericht in die Website kopieren
+        run: cp reports/FS23_Proj_GIS_Karto_Bericht_Dario_DeLuca.pdf web/bericht.pdf
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

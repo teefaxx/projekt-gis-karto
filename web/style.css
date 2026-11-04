@@ -5,6 +5,7 @@
   --c0: #a6db9c;   /* wenig Velowege · viele Ja */
   --cm1: #983aa8;  /* wenig Velowege · wenig Ja */
   --cnd: #d4d4d4;  /* keine Daten */
+  --ckomm: #ececec; /* Kommunanz */
   --orange: #f8a51b;
   --orange-dark: #b06a00;
   --lake: #b9e1f6;
@@ -74,7 +75,16 @@ h1 {
   text-wrap: balance;
 }
 
-.lead { margin: 0 0 14px; color: var(--ink-2); font-size: 14.5px; }
+.lead { margin: 0 0 10px; color: var(--ink-2); font-size: 14.5px; }
+
+.report-link { margin: 0 0 14px; }
+.report-link a {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px 5px 8px; border-radius: 8px;
+  background: #f4eff6; color: var(--cm1); font-weight: 600; font-size: 13.5px; text-decoration: none;
+}
+.report-link a:hover { background: #ece2f0; }
+.report-link svg { width: 16px; height: 16px; fill: currentColor; }
 
 .example { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; font-size: 13.5px; color: var(--ink-2); }
 .example summary { cursor: pointer; font-weight: 600; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -187,6 +197,20 @@ h1 {
 .hint { margin: 8px 0 0; font-size: 11.5px; color: var(--ink-3); }
 .nodata { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; font-size: 12px; color: var(--ink-2); text-align: left; }
 .nodata i { width: 16px; height: 12px; border-radius: 3px; background: var(--cnd); flex: none; }
+.nodata i.komm { background: var(--ckomm); box-shadow: inset 0 0 0 1px #c9c9c9; }
+
+.basemaps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.basemaps label { cursor: pointer; display: flex; }
+.basemaps input { position: absolute; opacity: 0; pointer-events: none; }
+.basemaps span {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px;
+  font-size: 12.5px; line-height: 1.2; text-align: center; background: #fff;
+  transition: border-color .15s, background .15s;
+}
+.basemaps label:first-child { grid-column: 1 / -1; }
+.basemaps input:checked + span { border-color: var(--cm1); background: #f4eff6; color: var(--cm1); font-weight: 600; }
+.basemaps input:focus-visible + span { outline: 2px solid var(--cm1); outline-offset: 2px; }
 
 .circles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; align-items: end; }
 .circles li { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -278,16 +302,8 @@ h1 {
 .tooltip b { font-weight: 700; }
 .tooltip span { color: #d9d2de; }
 
-/* ---------- Fusszeile ---------- */
-.credits {
-  position: absolute; z-index: 1; left: 50%; bottom: 8px; transform: translateX(-50%);
-  display: flex; gap: 6px 14px; flex-wrap: wrap; justify-content: center;
-  max-width: calc(100vw - 360px);
-  padding: 4px 12px; border-radius: 999px;
-  background: rgba(255,255,255,.85);
-  font-size: 11.5px; color: var(--ink-3);
-}
-.credits a { color: var(--ink-2); }
+.sources { margin: 16px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11.5px; line-height: 1.45; color: var(--ink-3); }
+.sources a { color: var(--ink-2); }
 
 .maplibregl-ctrl-group { border-radius: 10px !important; box-shadow: var(--shadow) !important; }
 .maplibregl-ctrl-scale { border-color: var(--ink-2); color: var(--ink-2); font-family: var(--font); }
@@ -299,7 +315,7 @@ h1 {
   body { font-size: 14px; }
   .title-panel { padding: 12px 14px 10px; }
   h1 { font-size: 22px; }
-  .lead, .eyebrow { display: none; }
+  .lead, .eyebrow, .report-link { display: none; }
   .example { display: none; }
   .legend-panel {
     top: auto; bottom: var(--gutter); right: var(--gutter); left: var(--gutter);
@@ -309,8 +325,7 @@ h1 {
     left: var(--gutter); right: var(--gutter); bottom: var(--gutter); width: auto;
     max-height: 62vh; min-height: 0; z-index: 3;
   }
-  .credits { display: none; }
-  .maplibregl-ctrl-top-right { margin-right: 0; top: 96px; }
+  .maplibregl-ctrl-top-right { margin-right: 0; top: 136px; }
   .maplibregl-ctrl-fullscreen { display: none !important; }
   .maplibregl-ctrl-bottom-right { bottom: 56px; }
 }

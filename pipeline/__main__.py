@@ -42,7 +42,7 @@ def run_prepare(args: argparse.Namespace) -> None:
 def run_build(args: argparse.Namespace) -> None:
     from . import build
 
-    build.main(output_dir=args.output_dir, recompute_bike_lengths=args.recompute_bike_lengths)
+    build.main(output_dir=args.output_dir)
 
 
 def run_analyze(args: argparse.Namespace) -> None:
@@ -96,13 +96,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             default=paths.PROCESSED_DIR,
             help="Verzeichnis für final_values.geojson / canton_accidents.csv "
             "(Standard: data/processed/)",
-        )
-    for p in (p_build, p_all):
-        p.add_argument(
-            "--recompute-bike-lengths",
-            action="store_true",
-            help="Veloweglängen mit geopandas aus bikes.geojson neu berechnen statt die "
-            "ArcGIS-Summen zu verwenden (weicht bei 12 Genfer Gemeinden ab).",
         )
     for p in (p_analyze, p_all):
         p.add_argument(

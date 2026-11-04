@@ -138,3 +138,5 @@ dmypy.json
 
 # DS_Store
 .DS_Store
+# Wird beim Pages-Deployment aus reports/ kopiert
+web/bericht.pdf

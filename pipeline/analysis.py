@@ -41,7 +41,7 @@ PLOTS = [
 def correlations(df: pd.DataFrame) -> dict[str, float]:
     """Pearson-Korrelation der Ja-Anteile mit Veloweg-Anteil bzw. Unfallrate.
 
-    Paarweise ohne NaN (betrifft BFS 6811 ohne Bevölkerungszahl und ohne Unfälle).
+    Paarweise ohne fehlende Werte (Gemeinden ohne eigenes Abstimmungsresultat).
     """
     return {
         "YES_IN_PER ~ BIKE_STREET_PER": df["YES_IN_PER"].corr(df["BIKE_STREET_PER"]),
@@ -78,10 +78,13 @@ def plot_corr(
 
 def main(final_path: Path = paths.FINAL_VALUES, figures_dir: Path = paths.FIGURES_DIR) -> dict:
     """Gibt die Korrelationen aus und schreibt die Diagramme."""
-    df = gpd.read_file(final_path)
+    df = gpd.read_file(final_path, ignore_geometry=True)
+    df = df.dropna(subset=["YES_IN_PER", "BIKE_STREET_PER"])
+    # Anteile für die Diagramme in Prozent
+    df[["YES_IN_PER", "BIKE_STREET_PER"]] = df[["YES_IN_PER", "BIKE_STREET_PER"]] * 100
 
     corr = correlations(df)
-    print(f"Pearson-Korrelation (n = {len(df)} Gemeinden):")
+    print(f"Pearson-Korrelation (n = {len(df)} Gemeinden mit eigenem Resultat):")
     for name, r in corr.items():
         print(f"  {name}: r = {r:.4f}")
 

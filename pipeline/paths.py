@@ -25,11 +25,23 @@ FIGURES_DIR = ROOT_DIR / "reports" / "figures"
 # --------------------------------------------------------------------------
 RAW_BFS_SHP = RAW_DIR / "shp_bfs" / "g1g23.shp"  # BFS Generalisierte Gemeindegrenzen 2023
 RAW_RESULTS_XLSX = RAW_DIR / "results" / "Resultate.xlsx"  # BFS Abstimmungsresultate
-RAW_ACCIDENTS_JSON = RAW_DIR / "accidents" / "accidents.json"  # ASTRA Strassenverkehrsunfälle
+# ASTRA Strassenverkehrsunfälle mit Personenschaden (wird bei Bedarf heruntergeladen)
+RAW_ACCIDENTS_CSV = RAW_DIR / "astra" / "RoadTrafficAccidentLocations.csv"
+ACCIDENTS_URL = (
+    "https://data.geo.admin.ch/ch.astra.unfaelle-personenschaeden_alle/"
+    "unfaelle-personenschaeden_alle/unfaelle-personenschaeden_alle_2056.csv.zip"
+)
+# swisstopo swissBOUNDARIES3D, Stand 1.1.2023 (= Gemeindestand der Auswertung),
+# für die Bevölkerungszahlen fusionierter Gemeinden und die Webkarte
+RAW_BOUNDARIES_GPKG = RAW_DIR / "swissboundaries3d" / "swissBOUNDARIES3D_1_5_LV95_LN02.gpkg"
+BOUNDARIES_URL = (
+    "https://data.geo.admin.ch/ch.swisstopo.swissboundaries3d/swissboundaries3d_2023-01/"
+    "swissboundaries3d_2023-01_2056_5728.gpkg.zip"
+)
 RAW_OSM_ROADS_SHP = (
     RAW_DIR / "OSM_new" / "switzerland-latest-free.shp" / "gis_osm_roads_free_1.shp"
 )  # Geofabrik OSM-Export
-RAW_VELOLAND_SHP = RAW_DIR / "velo" / "Weg.shp"  # SchweizMobil Veloland
+RAW_VELOLAND_SHP = RAW_DIR / "velo" / "Weg.shp"  # Veloland Schweiz
 RAW_POPULATION_CSV = RAW_DIR / "bevoelkerung" / "pop_2021.csv"  # BFS STAT-TAB, Bestand 1.1.2021
 
 # --------------------------------------------------------------------------
@@ -38,12 +50,10 @@ RAW_POPULATION_CSV = RAW_DIR / "bevoelkerung" / "pop_2021.csv"  # BFS STAT-TAB, 
 INTERIM_RESULTS = INTERIM_DIR / "results_bfs.geojson"
 INTERIM_ACCIDENTS = INTERIM_DIR / "accidents.geojson"
 INTERIM_BIKES = INTERIM_DIR / "bikes.geojson"
-# Manueller ArcGIS-Schritt (Summe Veloweglänge pro Gemeinde), sep=";":
-# Spalten BFS;FREQUENCY;SUM_Shape_Length
-INTERIM_BIKE_LENGTHS = INTERIM_DIR / "bike_lengths_arcgis.csv"
 # Manueller QGIS-Schritt (Länge Strassennetz pro Gemeinde): BFSNR,LENGTH,COUNT
 INTERIM_STREET_LENGTHS = INTERIM_DIR / "street_lengths_qgis.csv"
-INTERIM_POPULATION = INTERIM_DIR / "population_2021.csv"  # BFSNR,POP_TOTAL
+# BFSNR,POP_TOTAL,SOURCE – BFS 1.1.2021, Lücken (Fusionen) aus swissBOUNDARIES3D 2023-01
+INTERIM_POPULATION = INTERIM_DIR / "population_2021.csv"
 
 # --------------------------------------------------------------------------
 # Endresultate
@@ -61,11 +71,11 @@ CRS = "EPSG:2056"  # CH1903+ / LV95
 # OSM-Klasse "cycleway" im Geofabrik-Shapefile (fclass code 5152)
 OSM_CYCLEWAY_CODE = 5152
 
-# Unfallfilter aus accidents_data.py: Monat <= 9 UND Jahr <= 2018.
-# Achtung: Das schliesst Oktober-Dezember *aller* Jahre aus (vermutlich war
-# "bis September 2018" gemeint). Unverändert übernommen, um die Resultate zu erhalten.
-ACCIDENT_MAX_YEAR = 2018
-ACCIDENT_MAX_MONTH = 9
+# Velounfälle ab Beginn der ASTRA-Daten (2011) bis und mit September 2018
+# (Abstimmung am 23.09.2018; die Daten sind nur monatsgenau).
+# Die ursprüngliche Version filterte "Monat <= 9 UND Jahr <= 2018" und liess damit
+# Oktober–Dezember *aller* Jahre weg (25'121 statt 30'108 Unfälle).
+ACCIDENT_END = (2018, 9)
 
 # Veloweg-Anteil (Velowege / Strassennetz) der Prix-Velo-Städte, als Dezimalzahl.
 # Quelle: https://www.prixvelo.ch/de/prix-velo-infrastruktur
@@ -79,12 +89,9 @@ PRIXVELO_BIKE_SHARES = {
 }
 # Schwelle "gute Veloinfrastruktur" = Mittelwert der Prix-Velo-Städte (≈ 0.06465)
 BIKE_THRESHOLD = float(np.mean(list(PRIXVELO_BIKE_SHARES.values())))
-# Die Ja-Schwelle ist datenabhängig: round(mean(YES_IN_PER), 2) über alle Gemeinden
-# (siehe build.classify). Nachkommastellen dafür:
+# Die Ja-Schwelle ist datenabhängig: round(mean(YES_IN_PER), 2) über alle Gemeinden mit
+# eigenem Resultat (siehe build.classify). Nachkommastellen dafür:
 YES_THRESHOLD_DECIMALS = 2
-
-# Rundung des Veloweg-Anteils in % wie im ursprünglichen QGIS-Feldrechner
-BIKE_STREET_PER_DECIMALS = 3
 
 # Spalten (und Reihenfolge) von final_values.geojson
 FINAL_COLUMNS = [
@@ -95,6 +102,8 @@ FINAL_COLUMNS = [
     "ACCIDENTS",
     "ACCIDENTS_PER_100K",
     "POP_TOTAL",
+    "BIKE_LENGTH",
+    "STREET_LENGTH",
     "GMDNAME",
     "BZNR",
     "KTNR",
