@@ -132,6 +132,10 @@ const dataLayers = [
     layout: { 'line-join': 'round', 'line-cap': 'round' },
     paint: { 'line-color': '#1d1720', 'line-opacity': 0.55 },
   },
+];
+
+// Umrandungen (Hover, Auswahl) liegen über Gemeinden und Seen
+const topLayers = [
   {
     id: 'gemeinden-hover',
     type: 'line',
@@ -151,13 +155,10 @@ const dataLayers = [
     ...src('kantone_flaechen'),
     layout: { 'line-join': 'round' },
     paint: {
-      'line-color': '#e3262b',
-      'line-width': ['case', state('selected'), 3.5, state('hover'), 0, 0],
+      'line-color': ['case', state('selected'), '#e3262b', '#1d1720'],
+      'line-width': ['case', state('selected'), 3.5, state('hover'), 2, 0],
     },
   },
-];
-
-const topLayers = [
   {
     id: 'gemeinden-label',
     type: 'symbol',
@@ -315,6 +316,9 @@ function applyStyleState() {
     ? ['interpolate', ['linear'], ['zoom'], 6, 1.6, 10, 3, 14, 4.5]
     : ['interpolate', ['linear'], ['zoom'], 6, 0.9, 10, 2.2, 14, 3.5]);
   map.setPaintProperty('kantone-line', 'line-opacity', cantonView ? 0.8 : 0.55);
+  // Kantonsansicht: Grenzen auch über den Seen zeigen, sonst darunter (wie Druckkarte)
+  const belowWater = map.getLayer('water_line_intermittent') ? 'water_line_intermittent' : 'gemeinden-hover';
+  map.moveLayer('kantone-line', cantonView ? 'gemeinden-hover' : belowWater);
   map.setLayoutProperty('kantone-line', 'visibility', cantonView || $('#tg-borders').checked ? 'visible' : 'none');
   map.setLayoutProperty('kantone-fill', 'visibility', cantonView ? 'visible' : 'none');
   map.setLayoutProperty('gemeinden-label', 'visibility',
